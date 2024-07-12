@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Texture From Color Buffer</title>
+    <link rel="stylesheet" href="../demo.css" />
+    <script src="./script/demo-core.js"></script>
+    <script src="./script/glsim.js"></script>
+    <script src="./script/teapot-model-IFS.js"></script>
+    <script src="./script/basic-object-models-IFS.js"></script>
+    <script>
+      var camera;
+
+      var canvas; // the canvas on which we will draw.
+
+      var frameNumber = 0; // frame number for the animation
+
+      var sphere, cubeModel, cylinder, cone, torus, teapot, piramida; // model data for six objects.
+
+      /*  The display function, which draws the content of the canvas.
+       */
+      function draw() {
+        var objectNumber = Number(document.getElementById("object").value); // which object to draw.
+
+        /* First, draw the 2D scene, using a 256-by256 viewport to get a power-of-two texture. */
+
+        glDisable(GL_LIGHTING);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_TEXTURE_2D);
+        glViewport(0, 0, 256, 256); // Note that canvas must be at least 256-by-256.
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glOrtho(0, 7, -1, 5, -1, 1); // Limits requied by 2D scene
+        glMatrixMode(GL_MODELVIEW);
+
+        draw2DScene();
+
+        if (objectNumber == 7) {
+          return; // Just show the 2D scene as the image in the canvas.
+        }
+
+        /* Copy the image into the texture. */
+
+        glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 0, 0, 256, 256, 0);
+
+        /* Since we do not have mipmaps for the texture, we MUST set the texture
+       minimication filter to GL_NEAREST or GL_LINEAR, since the default
+       filter requires mipmaps. */
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+        /* Now, draw the shape, with the texture */
+
+        glEnable(GL_LIGHTING);
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_TEXTURE_2D);
+        glViewport(0, 0, canvas.width, canvas.height); // restore full viewport!
+
+        camera.apply(); // (Sets up projection and viewing transforms.)
+
+        glClearColor(0, 0, 0, 1);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        switch (objectNumber) {
+          case 0:
+            glRotatef(-90, 1, 0, 0);
+            glScalef(1.5, 1.5, 1.5);
+            drawModel(sphere);
+            break;
+          case 1:
+            glScalef(1.2, 1.2, 1.2);
+            drawModel(cubeModel);
+            break;
+          case 2:
+            glRotatef(-90, 1, 0, 0);
+            glScalef(1.3, 1.3, 1.3);
+            drawModel(cylinder);
+            break;
+          case 3:
+            glRotatef(-90, 1, 0, 0);
+            glScalef(1.3, 1.3, 1.3);
+            drawModel(cone);
+            break;
+          case 4:
+            glScalef(1.6, 1.6, 1.6);
+            drawModel(torus);
+            break;
+          case 5:
+            glScalef(0.06, 0.06, 0.06);
+            drawModel(teapot);
+            break;
+          case 6:
+            glScalef(0.7, 0.7, 0.7);
+            drawModel(piramida);
+            break;
+        }
+      }
+
+      /**
+       *  Draws a model using glDrawElements.  The model data must be in the format produced by
+       *  the functions in basic-object-models-IFS.js.
+       */
+      function drawModel(model) {
+        glEnableClientState(GL_VERTEX_ARRAY);
+        glVertexPointer(3, GL_FLOAT, 0, model.vertexPositions);
+        glEnableClientState(GL_NORMAL_ARRAY);
+        glNormalPointer(GL_FLOAT, 0, model.vertexNormals);
+        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+        glTexCoordPointer(2, GL_FLOAT, 0, model.vertexTextureCoords);
+        glDrawElements(
+          GL_TRIANGLES,
+          model.indices.length,
+          GL_UNSIGNED_BYTE,
+          model.indices
+        );
+        glDisableClientState(GL_VERTEX_ARRAY);
+        glDisableClientState(GL_NORMAL_ARRAY);
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+      }
+
+      function initGL() {
+        glEnable(GL_LIGHT0);
+        glEnable(GL_NORMALIZE);
+        glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, [1, 1, 1, 1]); // white material for texturing.
+      }
+
+      //----------------- Drawing the 2D scene ----------------------------------------
+
+      /*
+       * Draws the entire 2D scene with buildings.
+       */
+      function draw2DScene() {
+        glClearColor(0.7, 0.8, 1.0, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT); // Fills the scene with blue.
+        glLoadIdentity();
+
+        /* Draw buildings as rectangles */
+        var buildings = [
+          { x: 0.5, y: -1, width: 1, height: 3 },
+          { x: 2, y: -1, width: 1.2, height: 2.5 },
+          { x: 3.8, y: -1, width: 1, height: 3.5 },
+          { x: 5.5, y: -1, width: 1, height: 2.8 },
+          { x: 6.7, y: -1, width: 1, height: 2 }
+        ];
+
+        glColor3f(0.3, 0.3, 0.3); // Set the color for buildings
+
+        for (var i = 0; i < buildings.length; i++) {
+          var building = buildings[i];
+          glBegin(GL_POLYGON);
+          glVertex2f(building.x, building.y);
+          glVertex2f(building.x + building.width, building.y);
+          glVertex2f(building.x + building.width, building.y + building.height);
+          glVertex2f(building.x, building.y + building.height);
+          glEnd();
+        }
+
+        /* Draw windows on buildings */
+        glColor3f(1, 1, 0); // Yellow windows
+        for (var i = 0; i < buildings.length; i++) {
+          var building = buildings[i];
+          for (var y = building.y + 0.3; y < building.y + building.height - 0.3; y += 0.4) {
+            for (var x = building.x + 0.2; x < building.x + building.width - 0.2; x += 0.4) {
+              glBegin(GL_POLYGON);
+              glVertex2f(x, y);
+              glVertex2f(x + 0.2, y);
+              glVertex2f(x + 0.2, y + 0.2);
+              glVertex2f(x, y + 0.2);
+              glEnd();
+            }
+          }
+        }
+      }
+
+      //-------------------------------------------------------------------------------
+
+      var animating = false;
+
+      function frame() {
+        if (animating) {
+          frameNumber++;
+          draw();
+          setTimeout(frame, 30);
+        }
+      }
+
+      function doAnimate() {
+        animating = document.getElementById("animate").checked;
+        if (animating) {
+          frame();
+        }
+      }
+
+      function init() {
+        try {
+          canvas = document.getElementById("maincanvas");
+          glsimUse(canvas, null); // ( The "null" gives an RGBA color buffer instead of RGB.
+          //   It is needed here because the call to copyTexImage2D
+          //   uses the RGBA format. )
+        } catch (e) {
+          document.getElementById("canvas-holder").innerHTML =
+            "<p><b>Sorry, an error occurred:<br>" + e + "</b></p>";
+          return;
+        }
+        initGL();
+        document.getElementById("object").value = "1";
+        document.getElementById("object").onchange = draw;
+        document.getElementById("animate").checked = false;
+        document.getElementById("animate").onchange = doAnimate;
+        camera = new Camera();
+        camera.setScale(1);
+        camera.lookAt(2, 2, 5, 0, 0, 0, 0, 1, 0);
+        camera.installTrackball(draw);
+        sphere = uvSphere();
+        cubeModel = cube();
+        cylinder = uvCylinder();
+        cone = uvCone();
+        torus = uvTorus();
+        piramida = uvPyramid();
+        teapot = teapotModel();
+        draw();
+      }
+    </script>
+  </head>
+  <body onload="init()">
+    <h1>Texture From Color Buffer</h1>
+    <p>
+      This demo shows how to make a texture from an image that is drawn into the
+      color buffer. The 2D scene on the left is drawn into the color buffer, then
+      is copied into a texture. The texture is then mapped onto a 3D object,
+      which appears on the right. Select the 3D object from the list below.
+    </p>
+    <table>
+      <tr>
+        <td>
+          <select id="object">
+            <option value="0">Sphere</option>
+            <option value="1">Cube</option>
+            <option value="2">Cylinder</option>
+            <option value="3">Cone</option>
+            <option value="4">Torus</option>
+            <option value="5">Teapot</option>
+            <option value="6">Piramida</option>
+            <option value="7">Show 2D Scene</option>
+          </select>
+        </td>
+        <td>
+          <input type="checkbox" id="animate" />
+          <label for="animate">Animate</label>
+        </td>
+      </tr>
+    </table>
+    <div id="canvas-holder" style="width: 512px">
+      <canvas id="maincanvas" width="512" height="512"></canvas>
+    </div>
+  </body>
+</html>
